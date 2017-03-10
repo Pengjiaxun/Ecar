@@ -1,0 +1,151 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1"/>
+<meta http-equiv="X-UA-Compatible" content="chrome=IE8"/>
+<title>手机端下载</title>
+<style>
+html,body{margin:0;padding:0;font-family:'微软雅黑';}
+a{color:#0099E0;}
+#main{width:300px;margin:0 auto;}
+header{padding:18px 0 14px 25px;}
+h2{font-weight:normal;font-size:110%;}
+section{display:none;border:1px dashed #888;padding:0 0 18px 24px;}
+section p{padding:0px;font-size:14px;color:#444;line-height:1.5;}
+section img{max-width:98%;}
+section .link-reload{display:inline-block;padding:10px 0 0;}
+</style>
+</head>
+<body>
+<!-- 
+页面：处理微信中扫描二维码不能弹出apk下载
+url: ?id=xx&name=xx&lang=cn
+name需要二次encodeURIComponent
+-->
+<div id="main">
+	<header>
+		<!-- <h2>点击下载：<a href="http://download.gpsoo.net/gpsoo/android/car_online.apk">汽车在线</a></h2> -->
+	</header>
+	<section>
+		<!-- <p>如果您在微信中不能下载，<br />请"在浏览器中打开"进行下载：</p>
+		<img alt="在浏览器中打开进行下载" src="img/wx_opennew.png?t=140108" />
+		<a href="">刷新</a> -->
+	</section>
+</div>
+
+<script src="http://static.gpsoo.net/v3/js/jquery-1.7.2.min.js"></script>
+<script>
+var lg = {
+	cn : {
+		click:'点击下载: ',
+		dl:'下载: ',
+		reload: '刷新'
+	},
+	en : {
+		click:'click to download: ',
+		dl:'download: ',
+		reload:'refresh'
+	}
+};
+
+var goDownload = function(){
+	var userAgentInfo = navigator.userAgent,
+	Agents = [
+		"Android",
+		"iPhone", "iPod", "iPad",
+		"SymbianOS",
+		"Windows Phone",
+		"MicroMessenger"
+	],
+	isWX = userAgentInfo.indexOf("MicroMessenger")>0,
+	isIos = /iphone|ipod|ipad/ig.test(userAgentInfo),
+	lang,LANG,id,name,
+
+	//获取页面URL 参数
+	$_GET = function (paramName) {
+		var paramValue = "",
+			arrSource = [],
+			isFound = false,
+			search = document.location.search;
+		if (search.indexOf("?") == 0 && search.indexOf("=")>1){
+			arrSource = unescape(search).substring(1,search.length).split("&");
+			i = 0;
+			while (i < arrSource.length && !isFound){
+				if (arrSource[i].indexOf("=") > 0){
+					 if (arrSource[i].split("=")[0].toLowerCase()==paramName.toLowerCase()){
+						paramValue = arrSource[i].split("=")[1];
+						isFound = true;
+					 }
+				}
+				i++;
+			}
+		}
+		return paramValue;
+	},
+
+	getDownload = function(id){
+		var urlGetDownloadList = 'http://busapi.gpsoo.net/check/download?method=get',//请求地址：获取下载列表
+
+		url = urlGetDownloadList+'&id='+id,
+		data = {};
+
+		$.ajax({
+			url  : url,
+			data : data,
+			dataType : "jsonp",
+			jsonp : "callback",
+			success : function(json){
+				if(json.errcode === 0){
+					var data = json.data[id];
+					jump(data);
+				}else{
+					//alert('请求下载信息出错');
+				}
+			}
+		});
+	},
+
+	jump = function(data){
+		var _url = data.url;
+		var _name = name || data.name;
+
+		document.title = LANG.dl + _name;
+		$('header').html('<h2>'+LANG.click+'<a href="'+_url+'">'+_name+'</a></h2>');
+		location.href = (_url);
+	},
+
+	render = function(data){
+		var txt = isIos?'Safari':'浏览器';
+		var weixin = isWX ? [
+			'<p>如果您在微信中不能下载，<br />请点击右上角，选择"在'+txt+'中打开"进行下载：</p>',
+			'<img alt="在浏览器中打开进行下载" src="img/wx_opennew.png?t=140108" />',
+		].join('\n') : '',
+		html = [
+			weixin,
+			'<a class="link-reload" href="">'+LANG.reload+'</a>'
+		];
+		$('section').html(html.join('\n')).show();
+	},
+
+	init = function(){
+		lang = $_GET('lang') || 'cn';
+		LANG = lg[lang];
+		id = $_GET('id');
+		name = decodeURIComponent($_GET('name'));// || LANG.downloadUrl;
+
+        //微信中下载链接id参数写死为ecar_android_baidu，这里为ios端的做适配
+        if(id == 'ecar_android_baidu' && isIos){
+            id = 'ecar_iphone';
+        }
+        
+		render();
+		id && getDownload(id);
+	};
+
+	init();
+}();
+</script>
+
+</body>
+</html>
